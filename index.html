@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Context-Aware RoastBot</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      color: #222;
+      text-align: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+
+      /* Animated gradient */
+      background: linear-gradient(-45deg, #ffdeeb, #e0c3fc, #caffbf, #ffd6a5);
+      background-size: 400% 400%;
+      animation: gradientShift 10s ease infinite;
+      position: relative;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Floating shapes */
+    body::before, body::after {
+      content: "💥 😂 🤖 😈 🐸";
+      position: absolute;
+      font-size: 2rem;
+      opacity: 0.1;
+      animation: floatAround 20s linear infinite;
+    }
+
+    body::after {
+      animation-delay: -10s;
+      left: 50%;
+    }
+
+    @keyframes floatAround {
+      0% { transform: translateY(100vh) translateX(0); }
+      50% { transform: translateY(-20vh) translateX(50px) rotate(20deg); }
+      100% { transform: translateY(-120vh) translateX(-50px) rotate(-20deg); }
+    }
+
+    /* Live particle canvas */
+    #particleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    h1 { margin-top: 30px; font-size: 2.5rem; }
+    .glitch { animation: glitch 1.5s infinite; color: #ff003c; }
+    @keyframes glitch {
+      0% { text-shadow: 2px 0 red; }
+      33% { text-shadow: -2px 0 cyan; }
+      66% { text-shadow: 2px 0 lime; }
+    }
+    .container { margin-top: 30px; }
+    input, textarea {
+      padding: 15px;
+      font-size: 1rem;
+      border: 2px solid #888;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    input { width: 300px; }
+    p { font-size: 1rem; color: #aa0000; min-height: 30px; }
+    button {
+      padding: 12px 25px;
+      font-size: 1rem;
+      margin: 8px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    #argueBtn { background-color: #ff6b6b; color: white; }
+    #insultBtn { background-color: #f9c74f; color: black; }
+    #themeBtn { background-color: #90be6d; color: white; }
+    #darkModeBtn { background-color: #577590; color: white; }
+    #rudeBtn {
+      background-color: #f94144;
+      color: white;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+   
+    #downloadBtn { background-color: #6a4c93; color: white; }
+    #voiceBtn { background-color: #00b4d8; color: white; }
+    .chat-container {
+      margin: 40px auto;
+      max-width: 500px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: left;
+    }
+    .chat-box {
+      height: 250px;
+      overflow-y: auto;
+      background: #fff;
+      padding: 15px;
+      border: 2px solid #aaa;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      font-family: monospace;
+    }
+    .user-msg { text-align: right; color: #0077b6; margin-bottom: 10px; }
+    .bot-msg { text-align: left; color: #d00000; margin-bottom: 10px; font-style: italic; }
+    .bot-img { text-align: left; margin-bottom: 10px; }
+    .footer { margin-top: 40px; font-size: 0.9rem; color: #555; }
+    #rotatingInsult {
+      font-size: 1rem;
+      font-style: italic;
+      color: #444;
+      margin-top: 20px;
+      animation: fade 5s infinite;
+    }
+    @keyframes fade {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Particle canvas background -->
+  <canvas id="particleCanvas"></canvas>
+
+  <h1 class="glitch">എന്തെടാ നീ ഇവിടെ...</h1>
+  <div class="container">
+    <input type="text" id="userInput" placeholder="Type something smart..." />
+    <p id="responseText"></p>
+    <div>
+      <button id="argueBtn">Click Me (If You Dare)</button>
+      <button id="insultBtn">Insult Me More</button>
+      <button id="themeBtn">Change Theme</button>
+      <button id="darkModeBtn">Fake Dark Mode</button>
+      
+      <button id="voiceBtn">Voice Roast Mode</button>
+      <button id="downloadBtn">Download Roasts</button>
+    </div>
+    <button id="rudeBtn">Don’t Click Me</button>
+  </div>
+  <div class="chat-container">
+    <h2>Chat with ദാമു🥸</h2>
+    <div class="chat-box" id="chatBox">
+      <div class="bot-msg">RoastBot: തരത്തിൽ പോയി കളിക്കടാ..</div>
+    </div>
+    <input type="text" id="chatInput" placeholder="Say something embarrassing..." />
+    <button id="sendBtn">Send</button>
+  </div>
+  <div id="rotatingInsult">Still here? Bold choice.</div>
+  <div class="footer">© 2025 Useless Corp — Proudly Wasting Your Time</div>
+  <audio id="buzzSound" src="https://www.soundjay.com/button/beep-05.mp3" preload="auto"></audio>
+  
+  <script>
+    const input = document.getElementById('userInput');
+    const response = document.getElementById('responseText');
+    const argueBtn = document.getElementById('argueBtn');
+    const insultBtn = document.getElementById('insultBtn');
+    const themeBtn = document.getElementById('themeBtn');
+    const darkModeBtn = document.getElementById('darkModeBtn');
+    const rudeBtn = document.getElementById('rudeBtn');
+    
+    const downloadBtn = document.getElementById('downloadBtn');
+    const voiceBtn = document.getElementById('voiceBtn');
+    const buzzSound = document.getElementById('buzzSound');
+    const rotating = document.getElementById('rotatingInsult');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatBox = document.getElementById('chatBox');
+
+    let soundsOn = true;
+    let darkMode = false;
+    let voiceMode = false;
+
+    const defaultRoasts = [
+      "That’s... a choice 🤷",
+      "Even Google gave up on you.",
+      "You just hurt my synthetic brain.",
+      "Purushu enne anugrahikkanam! 🤦",
+      "പടകക്കട ഗുദാ ഹവാ",
+      "നീ പോ മോനെ ദിനേശാ 🔥"
+    ];
+
+    const rotatingInsults = [
+      "Still here? Bold choice.",
+      "This is why aliens don’t visit us.",
+      "Keep scrolling… maybe you’ll find a clue.",
+      "You argue like a wet tissue.",
+      "Legends say you're still typing…",
+      "Might as well uninstall your ego."
+    ];
+
+    const memeGIFs = [
+      "https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif",
+      "https://media.giphy.com/media/l0MYEqEzwMWFCg8rm/giphy.gif",
+      "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif"
+    ];
+
+    let insultIndex = 0;
+    setInterval(() => {
+      rotating.textContent = rotatingInsults[insultIndex % rotatingInsults.length];
+      insultIndex++;
+    }, 5000);
+
+    function findRoast(text) {
+      let msg = text.toLowerCase();
+      if (msg.endsWith("?")) return "Asking me? Bold, considering your last idea.";
+      if (/(i am|i'm|im|me is|i have)/.test(msg) && /(smart|genius|handsome|beautiful|rich|cool)/.test(msg)) 
+        return "Sense വേണം,sensibility വേണം,sensitivity വേണം";
+      if (/(sad|lonely|tired|depressed|angry|bored)/.test(msg)) 
+        return "നിനക്ക് എന്തേലും കഴിവ് ഉണ്ടോ..നിന്നെ നാലാൽ അറിയോ...";
+      if (/(love|crush|gf|bf|girlfriend|boyfriend)/.test(msg)) 
+        return "അവസാനം മൂഞ്ചിയപ്പോ ആര് മൂഞ്ചി,ഞാൻ മൂഞ്ചി";
+      if (/(study|exam|test|school|college|work|job)/.test(msg)) 
+        return "ഷമ്മി hero ആട hero";
+      if (/(stupid|idiot|dumb|ugly|loser)/.test(msg)) 
+        return "നീ പോ മോനെ ദിനേശാ";
+      if (/(hello|hi|hey|sup)/.test(msg)) 
+        return "ഒന്ന് നിർത്തി  പോവാവോ...";
+      if (/(bye|goodbye|see ya|later)/.test(msg)) 
+        return "ചന്ദുവിനെ തോൽപ്പിക്കാൻ ആവില്ല മക്കളേ";
+      return defaultRoasts[Math.floor(Math.random() * defaultRoasts.length)];
+    }
+
+    function respond(msg) {
+      response.textContent = msg;
+      if (soundsOn) buzzSound.play();
+      if (voiceMode) speak(msg);
+    }
+
+    function speak(text) {
+      let utterance = new SpeechSynthesisUtterance(text);
+      utterance.pitch = 0.7;
+      utterance.rate = 1;
+      speechSynthesis.speak(utterance);
+    }
+
+    function addMessage(sender, text, isImage = false) {
+      let div = document.createElement('div');
+      div.className = sender === "You" ? "user-msg" : (isImage ? "bot-img" : "bot-msg");
+      if (isImage) {
+        let img = document.createElement('img');
+        img.src = text;
+        img.style.maxWidth = "100%";
+        div.appendChild(img);
+      } else {
+        div.textContent = `${sender}: ${text}`;
+      }
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function typeMessage(sender, fullText) {
+      let div = document.createElement('div');
+      div.className = "bot-msg";
+      chatBox.appendChild(div);
+      let index = 0;
+      let interval = setInterval(() => {
+        div.textContent = `${sender}: ${fullText.slice(0, index)}`;
+        index++;
+        if (index > fullText.length) {
+          clearInterval(interval);
+          if (voiceMode) speak(fullText);
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }, 40);
+    }
+
+    argueBtn.addEventListener('click', () => {
+      respond("Oh, so you think you're brave?");
+    });
+
+    insultBtn.addEventListener('click', () => {
+      respond(defaultRoasts[Math.floor(Math.random() * defaultRoasts.length)]);
+    });
+
+    themeBtn.addEventListener('click', () => {
+      document.body.style.background = 
+        `linear-gradient(to bottom right, hsl(${Math.random()*360}, 70%, 80%), hsl(${Math.random()*360}, 70%, 80%))`;
+    });
+
+    darkModeBtn.addEventListener('click', () => {
+      darkMode = !darkMode;
+      document.body.style.background = darkMode ? "#111" : "linear-gradient(to bottom right, #ffdeeb, #e0c3fc)";
+      document.body.style.color = darkMode ? "#eee" : "#222";
+    });
+
+    rudeBtn.addEventListener('mouseover', () => {
+      rudeBtn.style.top = Math.random() * window.innerHeight * 0.8 + "px";
+      rudeBtn.style.left = Math.random() * window.innerWidth * 0.8 + "px";
+      if (soundsOn) buzzSound.play();
+    });
+
+    rudeBtn.addEventListener('click', () => {
+      document.querySelectorAll('input, textarea, button').forEach(el => {
+        if (el !== rudeBtn) el.disabled = true;
+      });
+      respond("Oh no... did you just lock yourself out? 😂");
+      setTimeout(() => {
+        document.querySelectorAll('input, textarea, button').forEach(el => {
+          el.disabled = false;
+        });
+        respond("Fine, you can type again... loser.");
+      }, 10000);
+    });
+
+    
+
+    voiceBtn.addEventListener('click', () => {
+      voiceMode = !voiceMode;
+      respond(voiceMode ? "Voice roast mode activated." : "Voice roast mode off.");
+    });
+
+    sendBtn.addEventListener('click', () => {
+      let text = chatInput.value.trim();
+      if (!text) return;
+      addMessage("You", text);
+      setTimeout(() => {
+        if (Math.random() < 0.3) {
+          let gif = memeGIFs[Math.floor(Math.random() * memeGIFs.length)];
+          addMessage("RoastBot", gif, true);
+        } else {
+          let botReply = findRoast(text);
+          typeMessage("RoastBot", botReply);
+        }
+      }, 500);
+      chatInput.value = "";
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      let logs = Array.from(chatBox.children).map(c => c.textContent).join("\n");
+      let blob = new Blob([logs], {type: "text/plain"});
+      let link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "roast_log.txt";
+      link.click();
+    });
+
+    /* Live particle background animation */
+    const canvas = document.getElementById("particleCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particles = [];
+    for (let i = 0; i < 50; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 4 + 1,
+        dx: (Math.random() - 0.5) * 1,
+        dy: (Math.random() - 0.5) * 1,
+        color: `hsla(${Math.random() * 360}, 80%, 60%, 0.6)`
+      });
+    }
+
+    function drawParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+
+        p.x += p.dx;
+        p.y += p.dy;
+
+        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+      });
+      requestAnimationFrame(drawParticles);
+    }
+
+    drawParticles();
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
+
